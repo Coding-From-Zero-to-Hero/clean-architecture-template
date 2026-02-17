@@ -1,22 +1,20 @@
 ﻿using Application.Abstractions.Authentication;
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Repositories;
 using Domain.Users;
-using Microsoft.EntityFrameworkCore;
 using SharedKernel;
 
 namespace Application.Users.Login;
 
 internal sealed class LoginUserCommandHandler(
-    IApplicationDbContext context,
+    IUserRepository repository,
     IPasswordHasher passwordHasher,
     ITokenProvider tokenProvider) : ICommandHandler<LoginUserCommand, string>
 {
     public async Task<Result<string>> Handle(LoginUserCommand command, CancellationToken cancellationToken)
     {
-        User? user = await context.Users
-            .AsNoTracking()
-            .SingleOrDefaultAsync(u => u.Email == command.Email, cancellationToken);
+        User? user = await repository.GetByEmail(command.Email, cancellationToken);
 
         if (user is null)
         {

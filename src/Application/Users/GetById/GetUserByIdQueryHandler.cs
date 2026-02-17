@@ -1,13 +1,13 @@
 ﻿using Application.Abstractions.Authentication;
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Repositories;
 using Domain.Users;
-using Microsoft.EntityFrameworkCore;
 using SharedKernel;
 
 namespace Application.Users.GetById;
 
-internal sealed class GetUserByIdQueryHandler(IApplicationDbContext context, IUserContext userContext)
+internal sealed class GetUserByIdQueryHandler(IUserRepository repository, IUserContext userContext)
     : IQueryHandler<GetUserByIdQuery, UserResponse>
 {
     public async Task<Result<UserResponse>> Handle(GetUserByIdQuery query, CancellationToken cancellationToken)
@@ -17,16 +17,15 @@ internal sealed class GetUserByIdQueryHandler(IApplicationDbContext context, IUs
             return Result.Failure<UserResponse>(UserErrors.Unauthorized());
         }
 
-        UserResponse? user = await context.Users
-            .Where(u => u.Id == query.UserId)
-            .Select(u => new UserResponse
+        UserResponse? user = await repository.GetById(query.UserId, cancellationToken) is { } u
+            ? new UserResponse
             {
                 Id = u.Id,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 Email = u.Email
-            })
-            .SingleOrDefaultAsync(cancellationToken);
+            }
+            : null;
 
         if (user is null)
         {

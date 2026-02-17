@@ -1,27 +1,26 @@
 ﻿using Application.Abstractions.Authentication;
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Repositories;
 using Domain.Users;
-using Microsoft.EntityFrameworkCore;
 using SharedKernel;
 
 namespace Application.Users.GetByEmail;
 
-internal sealed class GetUserByEmailQueryHandler(IApplicationDbContext context, IUserContext userContext)
+internal sealed class GetUserByEmailQueryHandler(IUserRepository repository, IUserContext userContext)
     : IQueryHandler<GetUserByEmailQuery, UserResponse>
 {
     public async Task<Result<UserResponse>> Handle(GetUserByEmailQuery query, CancellationToken cancellationToken)
     {
-        UserResponse? user = await context.Users
-            .Where(u => u.Email == query.Email)
-            .Select(u => new UserResponse
+        UserResponse? user = await repository.GetByEmail(query.Email, cancellationToken) is { } u
+            ? new UserResponse
             {
                 Id = u.Id,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 Email = u.Email
-            })
-            .SingleOrDefaultAsync(cancellationToken);
+            }
+            : null;
 
         if (user is null)
         {
